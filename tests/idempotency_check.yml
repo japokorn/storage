@@ -1,0 +1,30 @@
+---
+
+- name: Set up idempotency check facts space
+  set_fact:
+    icy_check: {}
+    icy_diff: false
+    icy_diff_details: {}
+  when: icy_check is undefined
+
+- name: Gather data
+  idempotency_check:
+    gather: "{{ gather | default(omit) }}"
+    compare_1: "{{ compare_1 | default(omit) }}"
+    compare_2: "{{ compare_2 | default(omit) }}"
+    icy_facts: "{{ icy_check }}"
+  register: icy_check_return
+
+- block:
+  - name: Update facts based on idempotency_check results
+    set_fact:
+      icy_check: "{{ icy_check_return.facts }}"
+  when: gather is defined
+
+- block:
+  - name: Store comparison result
+    set_fact:
+      icy_diff_details: "{{ icy_check_return.diff_details }}"
+      icy_diff: "{{ icy_check_return.diff }}"
+  when: compare_1 is defined and compare_2 is defined
+

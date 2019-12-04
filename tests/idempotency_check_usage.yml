@@ -1,0 +1,37 @@
+---
+- hosts: all
+  become: true
+
+  tasks:
+    - include_role:
+        name: storage
+
+    - include_tasks: idempotency_check.yml
+      vars:
+        gather: "original_state"
+
+    - name: First run
+      debug:
+        msg: "ash nazg durbatuluk"
+
+    - include_tasks: idempotency_check.yml
+      vars:
+        gather: "after_first_run_state"
+        compare_1: "original_state"
+        compare_2: "after_first_run_state"
+
+    - name: Second run
+      debug:
+        msg: "asz nazg gimbatul"
+
+    - include_tasks: idempotency_check.yml
+      vars:
+        gather: "after_second_run_state"
+        compare_1: "after_first_run_state"
+        compare_2: "after_second_run_state"
+
+    - debug:
+        var: icy_diff
+
+    - debug:
+        var: icy_diff_details
