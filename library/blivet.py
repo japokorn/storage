@@ -92,6 +92,7 @@ try:
     from blivet3 import Blivet
     from blivet3.callbacks import callbacks
     from blivet3 import devices
+    from blivet3.errors import RaidError
     from blivet3.flags import flags as blivet_flags
     from blivet3.formats import get_format
     from blivet3.partitioning import do_partitioning
@@ -104,6 +105,7 @@ except ImportError:
         from blivet import Blivet
         from blivet.callbacks import callbacks
         from blivet import devices
+        from blivet.errors import RaidError
         from blivet.flags import flags as blivet_flags
         from blivet.formats import get_format
         from blivet.partitioning import do_partitioning
@@ -419,6 +421,10 @@ class BlivetPool(object):
         """ Should this pool be present when we are finished? """
         return self._pool['state'] == 'present'
 
+    @property
+    def _is_raid(self):
+        return self._pool.get('raid_level') not in [None, "null", ""]
+
     def _create(self):
         """ Schedule actions as needed to ensure the pool exists. """
         pass
@@ -485,6 +491,7 @@ class BlivetPool(object):
     def _create_members(self):
         """ Schedule actions as needed to ensure pool member devices exist. """
         members = list()
+
         for disk in self._disks:
             if not disk.isleaf or disk.format.type is not None:
                 if safe_mode:
@@ -500,16 +507,41 @@ class BlivetPool(object):
             else:
                 member = disk
 
-            self._blivet.format_device(member, self._get_format())
+            if self._is_raid:
+                self._blivet.format_device(member, fmt=get_format("mdmember"))
+            else:
+                self._blivet.format_device(member, self._get_format())
             members.append(member)
+
+
+        if self._is_raid:
+            raid_name = "mdraid-%s" % self._pool['name']
+            raid_level = self._pool['raid_level']
+
+            try:
+                raid_array = self._blivet.new_mdarray(name=raid_name, level=raid_level,
+                                                  member_devices=len(members),
+                                                  total_devices=(len(members)),
+                                                  parents=members)
+            except ValueError as e:
+                raise BlivetAnsibleError("cannot create RAID '%s': %s" % (raid_name, str(e)))
+
+            self._blivet.create_device(raid_array)
+            result = [raid_array]
+        else:
+            result = members
 
         if use_partitions:
             try:
                 do_partitioning(self._blivet)
             except Exception:
-                raise BlivetAnsibleError("failed to allocation partitions for pool '%s'" % self._pool['name'])
+                raise BlivetAnsibleError("failed to allocate partitions for pool '%s'" % self._pool['name'])
 
-        return members
+        if self._is_raid:
+            self._blivet.format_device(raid_array, self._get_format())
+
+        return result
+
 
     def _get_volumes(self):
         """ Set up BlivetVolume instances for this pool's volumes. """
@@ -538,6 +570,7 @@ class BlivetPool(object):
         # schedule create if appropriate
         self._create()
         self._manage_volumes()
+
 
 
 class BlivetPartitionPool(BlivetPool):
@@ -578,10 +611,11 @@ class BlivetLVMPool(BlivetPool):
             return
 
         members = self._create_members()
+
         try:
             pool_device = self._blivet.new_vg(name=self._pool['name'], parents=members)
-        except Exception:
-            raise BlivetAnsibleError("failed to set up pool '%s'" % self._pool['name'])
+        except Exception as e:
+            raise BlivetAnsibleError("failed to set up pool '%s': %s" % (self._pool['name'], str(e)))
 
         self._blivet.create_device(pool_device)
         self._device = pool_device
@@ -756,6 +790,7 @@ def run_module():
 
     module = AnsibleModule(argument_spec=module_args,
                            supports_check_mode=True)
+
     if not BLIVET_PACKAGE:
         module.fail_json(msg="Failed to import the blivet or blivet3 Python modules",
                          exception=inspect.cleandoc("""
