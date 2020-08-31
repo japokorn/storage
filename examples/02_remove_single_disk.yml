@@ -1,0 +1,21 @@
+---
+- hosts: all
+  become: true
+  vars:
+    # Turn off the safe mode
+    storage_safe_mode: false
+
+  # Destroy existing volume on /dev/vdX
+  # WARNING: Do not use device names directly as used in here (e.g. /dev/vdc)
+  # as they can change. That could lead to loss of data.
+  tasks:
+    - include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: Remove volume example
+            type: disk
+            disks:
+              - "/dev/vdX"
+            state: absent
+

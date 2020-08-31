@@ -1,0 +1,25 @@
+---
+- hosts: all
+  become: true
+  vars:
+    # Turn off the safe mode
+    storage_safe_mode: false
+
+  # Create new RAID0 volume using /dev/vdX and /dev/vdY and mount it to /opt/example1
+  # WARNING: Do not use device names directly as used in here (e.g. /dev/vdc)
+  # as they can change. That could lead to loss of data.
+  tasks:
+    - include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: Create volume example
+            type: raid
+            # Accepted raid_level values are:
+            #   `linear`, `striped`, `raid0`, `raid1`, `raid4`, `raid5`, `raid6`, `raid10`
+            raid_level: "raid0"
+            disks:
+              - "/dev/vdX"
+              - "/dev/vdY"
+            mount_point: "/opt/example1"
+

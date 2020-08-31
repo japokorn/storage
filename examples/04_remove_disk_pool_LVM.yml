@@ -1,0 +1,22 @@
+---
+- hosts: all
+  become: true
+  vars:
+    # Turn off the safe mode
+    storage_safe_mode: false
+
+  # Destroy existing LVM on /dev/vdX and /dev/vdY
+  # WARNING: Do not use device names directly as used in here (e.g. /dev/vdc)
+  # as they can change. That could lead to loss of data.
+  tasks:
+    - include_role:
+        name: storage
+      vars:
+        storage_pools:
+          - name: VG1
+            # Name of volume group to be removed
+            disks:
+              - "/dev/vdX"
+              - "/dev/vdY"
+            state: absent
+

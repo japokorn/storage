@@ -1,0 +1,13 @@
+---
+- hosts: all
+  become: true
+  vars:
+    # Safe mode prevents all storage changes (default: true)
+    storage_safe_mode: false
+
+  tasks:
+    - include_role:
+        name: storage
+        # With no variables storage role only scans the target and
+        # installs missing packages
+

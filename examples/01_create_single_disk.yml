@@ -1,0 +1,22 @@
+---
+- hosts: all
+  become: true
+  vars:
+    # Turn off the safe mode
+    storage_safe_mode: false
+
+  # Create new ext4 volume on /dev/vdX and mount it to /opt/example1
+  # WARNING: Do not use device names directly as used in here (e.g. /dev/vdc)
+  # as they can change. That could lead to loss of data.
+  tasks:
+    - include_role:
+        name: storage
+      vars:
+        storage_volumes:
+          - name: Create volume example
+            type: disk
+            disks:
+              - "/dev/vdX"
+            fs_type: "ext4"
+            mount_point: "/opt/example1"
+

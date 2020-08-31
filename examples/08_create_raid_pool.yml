@@ -1,0 +1,37 @@
+---
+- hosts: all
+  become: true
+  vars:
+    # Turn off the safe mode
+    storage_safe_mode: false
+
+  tasks:
+    - name: Create three LVM logical volumes under one volume group
+      include_role:
+        name: storage
+      vars:
+          storage_pools:
+            - name: VG1
+              # Volume group - combined space of all given disks.
+              # WARNING: Do not use device names directly as used in here (e.g. /dev/vdc)
+              # as they can change. That could lead to loss of data.
+              disks:
+                - "/dev/vdX"
+                - "/dev/vdY"
+              type: lvm
+              # Accepted raid_level values are:
+              #   `linear`, `striped`, `raid0`, `raid1`, `raid4`, `raid5`, `raid6`, `raid10`
+              raid_level: "raid0"
+              volumes:
+                - name: LV1
+                  # 1st logical volume placed in volume group
+                  size: "4G"
+                  mount_point: "/opt/example1"
+                - name: LV2
+                  # 2nd logical volume placed in volume group
+                  size: "2G"
+                  mount_point: "/opt/example2"
+                - name: LV3
+                  # 3rd logical volume placed in volume group
+                  size: "5G"
+                  mount_point: "/opt/example3"
