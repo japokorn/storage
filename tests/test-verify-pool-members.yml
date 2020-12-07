@@ -50,6 +50,9 @@
 - name: Check raid
   include_tasks: verify-pool-md.yml
 
+- name: Check VDO
+  include_tasks: verify-pool-vdo.yml
+
 - name: Check member encryption
   include_tasks: verify-pool-members-encryption.yml
 

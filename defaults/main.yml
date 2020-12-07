@@ -23,6 +23,10 @@ storage_pool_defaults:
   raid_chunk_size: null
   raid_metadata_version: null
 
+  vdo_compression: null
+  vdo_deduplication: null
+  vdo_logical_size: null
+
 storage_volume_defaults:
   state: "present"
   type: lvm

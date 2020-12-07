@@ -1,0 +1,41 @@
+---
+
+  # Only when pool is VDO
+- name: check VDO
+  block:
+  - name: get information about VDO deduplication
+    command: "vdostats --verbose {{ storage_test_pool.name }}-vdopool-vpool"
+    register: storage_test_vdo_status
+    changed_when: false
+
+  - set_fact:
+      storage_test_vdo_dedupe_re: "{{('maximum dedupe queries +: +0$')}}"
+
+  - assert:
+      that: "storage_test_vdo_status.stdout is regex(storage_test_vdo_dedupe_re)"
+      msg: "VDO deduplication is on but it should not"
+    when: storage_test_pool.vdo_deduplication == false
+
+  - assert:
+      that: "storage_test_vdo_status.stdout is not regex(storage_test_vdo_dedupe_re)"
+      msg: "VDO deduplication is off but it should not"
+    when: storage_test_pool.vdo_deduplication == true
+
+  - set_fact:
+      storage_test_vdo_compress_re: "{{('compressed fragments written +: +0$')}}"
+
+  - assert:
+      that: "storage_test_vdo_status.stdout is regex(storage_test_vdo_compress_re)"
+      msg: "VDO compression is on but it should not"
+    when: storage_test_pool.vdo_compression == false
+
+  - assert:
+      that: "storage_test_vdo_status.stdout is not regex(storage_test_vdo_compress_re)"
+      msg: "VDO compression is off but it should not"
+    when: storage_test_pool.vdo_compression == true
+
+  when: (storage_test_pool.vdo_deduplication != none or storage_test_pool.vdo_compression != none) and storage_test_pool.state != "absent"
+
+- set_fact:
+    storage_test_vdo_status: null
+

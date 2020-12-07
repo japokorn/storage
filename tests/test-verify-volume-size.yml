@@ -9,8 +9,22 @@
 - name: parse the requested size of the volume
   bsize:
     size: "{{ storage_test_volume.size }}"
-  register: storage_test_requested_size
+  register: st_rsize_org
   when: _storage_test_volume_present and storage_test_volume.size is defined and storage_test_volume.type not in ('partition', 'disk', 'raid')
+
+- name: parse the requested size in case of VDO
+  # for VDO the requested size differs
+  bsize:
+    size: "{{ storage_test_pool.vdo_logical_size }}"
+  register: st_rsize_vdo
+  when: _storage_test_volume_present and
+        storage_test_pool != none and
+        storage_test_pool.vdo_logical_size != none and
+        storage_test_volume.type not in ('partition', 'disk', 'raid')
+
+- name: get requested size
+  set_fact:
+    storage_test_requested_size: "{{ st_rsize_vdo if st_rsize_org.skipped is not defined and st_rsize_vdo.skipped is not defined else st_rsize_org }}"
 
 - debug:
     var: storage_test_actual_size

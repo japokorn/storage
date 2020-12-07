@@ -441,6 +441,9 @@ class BlivetVolume(BlivetBase):
         if self._device.raw_device.exists:
             self._reformat()
 
+        #if self._volume['name'] == 'test1':
+        #    raise BlivetAnsibleError("MYDEBUG: %s" % self._volume['name'])
+
         if self.ultimately_present and self._volume['mount_point'] and not self._device.format.mountable:
             raise BlivetAnsibleError("volume '%s' has a mount point but no mountable file system" % self._volume['name'])
 
@@ -554,11 +557,27 @@ class BlivetLVMVolume(BlivetVolume):
                                                                                                                    parent.name,
                                                                                                                    parent.free_space))
 
+        create_vdo = self._blivet_pool._pool['vdo_deduplication'] or self._blivet_pool._pool['vdo_compression']
+        lv_size = size
+        if create_vdo:
+            try:
+                vdopool = self._blivet.new_lv(name='vdopool', vdo_pool=True,
+                                            parents=[parent], compression=self._blivet_pool._pool['vdo_compression'],
+                                            deduplication=self._blivet_pool._pool['vdo_deduplication'],
+                                            size=size)
+            except Exception as e:
+                raise BlivetAnsibleError("failed to set up VDO pool '%s': %s" % (self._volume['name'], str(e)))
+
+            if self._blivet_pool._pool['vdo_logical_size']:
+                lv_size = Size(self._blivet_pool._pool['vdo_logical_size'])
+            self._blivet.create_device(vdopool)
+
         try:
-            device = self._blivet.new_lv(name=self._volume['name'],
-                                         parents=[parent], size=size, fmt=fmt)
-        except Exception:
-            raise BlivetAnsibleError("failed to set up volume '%s'" % self._volume['name'])
+            device = self._blivet.new_lv(name=self._volume['name'], vdo_lv=create_vdo,
+                                        parents=[vdopool if create_vdo else parent],
+                                        size=lv_size,fmt=fmt)
+        except Exception as e:
+            raise BlivetAnsibleError("failed to set up volume '%s': %s" % (self._volume['name'], str(e)))
 
         self._blivet.create_device(device)
         self._device = device
@@ -696,7 +715,8 @@ class BlivetPool(BlivetBase):
 
         if self._pool['encryption']:
             packages.extend(get_format('luks').packages)
-
+        if self._pool.get('vdo_compression') or self._pool.get('vdo_deduplication'):
+            packages.extend(['vdo', 'kmod-kvdo'])
         return packages
 
     @property

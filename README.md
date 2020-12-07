@@ -63,6 +63,28 @@ This integer specifies the LUKS key size (in bytes).
 ##### `encryption_luks_version`
 This integer specifies the LUKS version to use.
 
+##### `vdo_deduplication`
+This specifies whether or not the Virtual Data Optimizer will be used.
+When set, duplicate data stored on underlying storage volume will be
+deduplicated resulting in more storage capacity.
+Can be used together with `vdo_compression`(optional) and `vdo_logical_size` (strongly recommended).
+Limit one `storage_volume` per `storage_pool`.
+Underlying volume has to be at least 9 GB (bare minimum is around 5 GiB).
+
+##### `vdo_compression`
+This specifies whether or not the Virtual Data Optimizer will be used.
+When set, data stored on underlying storage volume will be
+compressed resulting in more storage capacity.
+Can be used together with `vdo_deduplication`(optional) and `vdo_logical_size` (strongly recommended).
+Limit one `storage_volume` per `storage_pool`.
+
+##### `vdo_logical_size`
+When Virtual Data Optimizer is used, this specifies size that volume
+will appear to have. Size can be higher based on duplicity and/or compressibility of stored data
+(e.g.: 3 times the size of the volume). The format is intended to be human-readable,
+e.g.: "30g", "50GiB".
+Default value is equal to the size of the volume.
+
 
 #### `storage_volumes`
 The `storage_volumes` variable is a list of volumes to manage. Each volume has the following
