@@ -785,7 +785,8 @@ class BlivetPool(BlivetBase):
 
         for disk in self._disks:
             if not disk.isleaf or disk.format.type is not None:
-                if safe_mode:
+                #if safe_mode:
+                if safe_mode and self._device.format.name != get_format(None).name:
                     raise BlivetAnsibleError("cannot remove existing formatting and/or devices on disk '%s' (pool '%s') in safe mode" % (disk.name, self._pool['name']))
                 else:
                     self._blivet.devicetree.recursive_remove(disk)
